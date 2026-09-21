@@ -64,65 +64,60 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// ============ 只查登录服 ============
-function setDot(dotId, statusId, online, label) {
-  const dot = document.getElementById(dotId);
-  const st = document.getElementById(statusId);
-  if (online) {
-    dot.style.background = '#00ff88';
-    dot.style.boxShadow = '0 0 8px #00ff88';
-    st.textContent = label + '在线';
-  } else {
+// ============ 诊断辅助 ============
+function showStatus(text, isError) {
+  const st = document.getElementById('loginStatus');
+  const dot = document.getElementById('loginDot');
+  st.textContent = text;
+  if (isError) {
     dot.style.background = '#ff3333';
     dot.style.boxShadow = '0 0 8px #ff3333';
-    st.textContent = label + '离线';
+  } else {
+    dot.style.background = '#00ff88';
+    dot.style.boxShadow = '0 0 8px #00ff88';
   }
 }
 
 async function queryServer(host) {
+  const url = 'https://api.mcsrvstat.us/3/' + encodeURIComponent(host);
+  console.log('[query]', url);
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(
-      'https://api.mcsrvstat.us/3/' + encodeURIComponent(host),
-      { signal: ctrl.signal }
-    );
+    const r = await fetch(url, { signal: ctrl.signal });
     clearTimeout(timer);
+    console.log('[query] status', r.status);
     const data = await r.json();
+    console.log('[query] data', data);
     return {
       online: data.online === true,
       players: data.players ? (data.players.online || 0) : 0,
-      max: data.players ? (data.players.max || 0) : 0,
-      version: data.version || ''
+      max: data.players ? (data.players.max || 0) : 0
     };
   } catch (e) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      const r = await fetch(
-        'https://api.mcstatus.io/v2/status/java/' + encodeURIComponent(host),
-        { signal: ctrl.signal }
-      );
-      clearTimeout(timer);
-      const data = await r.json();
-      return {
-        online: data.online === true,
-        players: data.players ? (data.players.online || 0) : 0,
-        max: data.players ? (data.players.max || 0) : 0,
-        version: data.version && data.version.name_clean ? data.version.name_clean : ''
-      };
-    } catch (e2) {
-      return { online: false, players: 0, max: 0, version: '', error: true };
-    }
+    clearTimeout(timer);
+    console.error('[query] error', e);
+    return { online: false, players: 0, max: 0, error: String(e) };
   }
 }
 
 async function loadStatus() {
+  console.log('[loadStatus] start');
   const login = await queryServer('play.simpfun.cn:26897');
+  console.log('[loadStatus] result', login);
+
+  if (login.error) {
+    showStatus('查询失败（' + login.error.slice(0, 30) + '）', true);
+    document.getElementById('loginPlayers').textContent = '?';
+    document.getElementById('loginMax').textContent = '?';
+    return;
+  }
 
   document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
   document.getElementById('loginMax').textContent = login.online ? login.max : '-';
-  setDot('loginDot', 'loginStatus', login.online, '登录服');
+  showStatus(login.online ? '登录服在线' : '登录服离线', !login.online);
 }
 
 loadStatus();
