@@ -35,7 +35,91 @@ function drawStars() {
 }
 drawStars();
 
-// 拉取房间
+// 复制地址
+function copyServerIp() {
+  copyText('mc.bcsimp.icu');
+}
+
+function copyLoginIp() {
+  copyText('play.simpfun.cn:26897');
+}
+
+function copyText(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('已复制：' + text);
+    }).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    alert('已复制：' + text);
+  } catch (e) {
+    alert('复制失败，请手动复制：' + text);
+  }
+  document.body.removeChild(ta);
+}
+
+// 拉服务器状态
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const data = await r.json();
+    if (!data.ok) return;
+
+    const main = data.main;
+    const login = data.login;
+
+    document.getElementById('mainPlayers').textContent = main.online ? main.players : '离线';
+    document.getElementById('mainMax').textContent = main.online ? main.max : '-';
+    document.getElementById('mainMotd').textContent = main.motd || '正式游戏服';
+
+    document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
+    document.getElementById('loginMax').textContent = login.online ? login.max : '-';
+    document.getElementById('loginMotd').textContent = login.motd || '外置登录认证';
+
+    if (main.online) {
+      document.getElementById('mainDot').style.background = '#00ff88';
+      document.getElementById('mainDot').style.boxShadow = '0 0 8px #00ff88';
+      document.getElementById('mainStatus').textContent = '主服在线';
+    } else {
+      document.getElementById('mainDot').style.background = '#ff3333';
+      document.getElementById('mainDot').style.boxShadow = '0 0 8px #ff3333';
+      document.getElementById('mainStatus').textContent = '主服离线';
+    }
+
+    if (login.online) {
+      document.getElementById('loginDot').style.background = '#00ff88';
+      document.getElementById('loginDot').style.boxShadow = '0 0 8px #00ff88';
+      document.getElementById('loginStatus').textContent = '登录服在线';
+    } else {
+      document.getElementById('loginDot').style.background = '#ff3333';
+      document.getElementById('loginDot').style.boxShadow = '0 0 8px #ff3333';
+      document.getElementById('loginStatus').textContent = '登录服离线';
+    }
+
+    const total = (main.online ? main.players : 0) + (login.online ? login.players : 0);
+    document.getElementById('totalPlayers').textContent = total;
+
+    if (main.version) {
+      document.getElementById('serverVersion').textContent = main.version.split(' ')[0];
+    }
+  } catch (e) {
+    console.error('loadStatus error:', e);
+  }
+}
+
+// 拉房间
 async function loadRooms() {
   const list = document.getElementById('roomList');
   try {
@@ -43,14 +127,10 @@ async function loadRooms() {
     const data = await r.json();
     if (!data.ok || !data.rooms || data.rooms.length === 0) {
       list.innerHTML = '<div class="empty">暂无开放房间<br><span style="font-size:12px;color:#444">打开游戏客户端创建房间后会显示在这里</span></div>';
-      document.getElementById('roomCount').textContent = '0';
-      document.getElementById('onlineCount').textContent = '0';
       return;
     }
-    let totalPlayers = 0;
     list.innerHTML = '';
     for (const room of data.rooms) {
-      totalPlayers += room.player_count || 0;
       const item = document.createElement('div');
       item.className = 'room-item';
       item.innerHTML =
@@ -61,8 +141,6 @@ async function loadRooms() {
         '<div class="room-count">' + (room.player_count || 0) + '/' + (room.max_players || 8) + '</div>';
       list.appendChild(item);
     }
-    document.getElementById('roomCount').textContent = data.rooms.length;
-    document.getElementById('onlineCount').textContent = totalPlayers;
   } catch (e) {
     list.innerHTML = '<div class="empty">无法连接服务器</div>';
   }
@@ -78,5 +156,7 @@ function escapeHtml(s) {
   }[c]));
 }
 
+loadStatus();
 loadRooms();
-setInterval(loadRooms, 5000);
+setInterval(loadStatus, 30000);
+setInterval(loadRooms, 10000);
