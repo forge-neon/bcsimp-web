@@ -1,111 +1,243 @@
-// ==================== 日志系统 ====================
-let logCount = 0;
-const MAX_LOG_LINES = 200;
+// ==================== 权限系统 ====================
+var state = {
+  role: 'user',      // guest < user < admin
+  violations: 0,
+  logs: []
+};
 
+var MAX_LOG = 300;
+var REAL_PWD = '1145145a2';
+
+(function restoreRole() {
+  try {
+    var r = localStorage.getItem('bcsimp_role') || 'user';
+    var v = parseInt(localStorage.getItem('bcsimp_violations') || '0');
+    state.role = r;
+    state.violations = v;
+    if (state.violations >= 3) {
+      state.role = 'guest';
+      localStorage.setItem('bcsimp_role', 'guest');
+    }
+  } catch (e) {}
+})();
+
+// ==================== 工具函数 ====================
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-function logTime() {
-  const d = new Date();
-  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+function nowStr() {
+  var d = new Date();
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+    + '.' + String(d.getMilliseconds()).padStart(3, '0');
 }
 
-function addLog(msg, type) {
-  type = type || 'info';
-  logCount++;
-  const content = document.getElementById('logContent');
-  const countEl = document.getElementById('logCount');
-  if (!content || !countEl) {
-    // 如果页面还没加载完，就把日志打到 console
-    console.log('[LOG]', msg);
-    return;
-  }
-
-  const line = document.createElement('div');
-  line.className = 'log-line log-' + type;
-  line.innerHTML = '<span class="log-time">' + logTime() + '</span>' + escapeHtml(String(msg));
-  content.appendChild(line);
-
-  while (content.children.length > MAX_LOG_LINES) {
-    content.removeChild(content.firstChild);
-  }
-
-  countEl.textContent = logCount;
-
-  const panel = document.getElementById('logPanel');
-  if (panel) panel.scrollTop = panel.scrollHeight;
+function tsStr(ts) {
+  var d = new Date(ts);
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+    + '.' + String(d.getMilliseconds()).padStart(3, '0');
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[c]));
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+// 域名脱敏
+function sanitize(text) {
+  var s = String(text);
+  s = s.replace(/mc\.bcsimp\.icu/gi, '[主服]');
+  s = s.replace(/play\.simpfun\.cn/gi, '[登录服]');
+  s = s.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP]');
+  return s;
+}
+
+// ==================== 日志 ====================
+var logCount = 0;
+
+function addLog(msg, type) {
+  type = type || 'info';
+  if (state.role === 'guest') return;
+
+  logCount++;
+  state.logs.push({ ts: Date.now(), msg: String(msg), type: type });
+  if (state.logs.length > MAX_LOG) state.logs.shift();
+
+  var content = document.getElementById('logContent');
+  var countEl = document.getElementById('logCount');
+  if (!content || !countEl) return;
+
+  var line = document.createElement('div');
+  line.className = 'log-line log-' + type;
+  var displayMsg = (state.role === 'admin') ? String(msg) : sanitize(msg);
+  line.innerHTML = '<span class="log-time">' + nowStr() + '</span>' + escapeHtml(displayMsg);
+  content.appendChild(line);
+
+  while (content.children.length > MAX_LOG) content.removeChild(content.firstChild);
+  countEl.textContent = logCount;
+
+  var panel = document.getElementById('logPanel');
+  if (panel) panel.scrollTop = panel.scrollHeight;
+}
+
+function renderAllLogs() {
+  var content = document.getElementById('logContent');
+  if (!content) return;
+  content.innerHTML = '';
+  var countEl = document.getElementById('logCount');
+  if (countEl) countEl.textContent = state.logs.length;
+
+  for (var i = 0; i < state.logs.length; i++) {
+    var l = state.logs[i];
+    var line = document.createElement('div');
+    line.className = 'log-line log-' + l.type;
+    var displayMsg = (state.role === 'admin') ? l.msg : sanitize(l.msg);
+    line.innerHTML = '<span class="log-time">' + tsStr(l.ts) + '</span>' + escapeHtml(displayMsg);
+    content.appendChild(line);
+  }
+
+  var panel = document.getElementById('logPanel');
+  if (panel) panel.scrollTop = panel.scrollHeight;
 }
 
 function toggleLog() {
-  const p = document.getElementById('logPanel');
+  var p = document.getElementById('logPanel');
   if (p) p.classList.toggle('open');
 }
 
-// 劫持 console
-const _origLog = console.log;
-const _origWarn = console.warn;
-const _origError = console.error;
+// ==================== 角色 UI ====================
+function updateRoleUI() {
+  var roleEl = document.getElementById('logRole');
+  var adminBar = document.getElementById('adminBar');
+  var logPanel = document.getElementById('logPanel');
+  if (!roleEl || !adminBar || !logPanel) return;
 
-console.log = function() {
-  _origLog.apply(console, arguments);
-  try {
-    addLog(Array.from(arguments).map(a =>
-      typeof a === 'object' ? JSON.stringify(a) : String(a)
-    ).join(' '), 'info');
-  } catch (e) {}
-};
-console.warn = function() {
-  _origWarn.apply(console, arguments);
-  try {
-    addLog(Array.from(arguments).map(a =>
-      typeof a === 'object' ? JSON.stringify(a) : String(a)
-    ).join(' '), 'warn');
-  } catch (e) {}
-};
-console.error = function() {
-  _origError.apply(console, arguments);
-  try {
-    addLog(Array.from(arguments).map(a =>
-      typeof a === 'object' ? JSON.stringify(a) : String(a)
-    ).join(' '), 'error');
-  } catch (e) {}
-};
-
-window.addEventListener('error', function(e) {
-  addLog('未捕获错误: ' + e.message + ' @ ' + e.filename + ':' + e.lineno, 'error');
-});
-window.addEventListener('unhandledrejection', function(e) {
-  addLog('未处理 Promise: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), 'error');
-});
-
-// 启动日志（等 DOM 就绪）
-function bootLog() {
-  addLog('=== bcsimp 官网启动 ===', 'success');
-  addLog('UA: ' + navigator.userAgent.slice(0, 80), 'data');
-  addLog('在线状态: ' + (navigator.onLine ? '在线' : '离线'), navigator.onLine ? 'success' : 'warn');
-  addLog('页面地址: ' + location.href, 'data');
+  if (state.role === 'admin') {
+    roleEl.textContent = '管理员';
+    roleEl.style.background = 'rgba(255,80,80,0.2)';
+    roleEl.style.color = '#ff5555';
+    adminBar.style.display = 'block';
+    logPanel.style.display = 'block';
+  } else if (state.role === 'user') {
+    roleEl.textContent = '普通用户';
+    roleEl.style.background = 'rgba(0,255,200,0.15)';
+    roleEl.style.color = '#00ffc8';
+    adminBar.style.display = 'none';
+    logPanel.style.display = 'block';
+  } else {
+    roleEl.textContent = '访客';
+    roleEl.style.background = 'rgba(100,100,100,0.3)';
+    roleEl.style.color = '#888';
+    adminBar.style.display = 'none';
+    logPanel.style.display = 'none';
+  }
 }
 
-// ==================== 星空 ====================
-const canvas = document.getElementById('stars');
-const ctx = canvas ? canvas.getContext('2d') : null;
-let stars = [];
+// ==================== 管理员验证 ====================
+async function sha256(text) {
+  var enc = new TextEncoder().encode(text);
+  var buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-function resize() {
-  if (!canvas) return;
+async function tryAdmin() {
+  var input = document.getElementById('adminPwd');
+  if (!input) return;
+  var val = input.value.trim();
+  if (!val) return;
+
+  // 防注入：只允许字母数字
+  if (!/^[a-zA-Z0-9]+$/.test(val)) {
+    recordViolation('非法字符');
+    input.value = '';
+    return;
+  }
+  if (val.length > 64) {
+    recordViolation('超长输入');
+    input.value = '';
+    return;
+  }
+
+  var h = await sha256(val);
+  var expected = await sha256(REAL_PWD);
+
+  if (h === expected) {
+    state.role = 'admin';
+    try { localStorage.setItem('bcsimp_role', 'admin'); } catch (e) {}
+    updateRoleUI();
+    renderAllLogs();
+    alert('管理员验证通过');
+    input.value = '';
+  } else {
+    recordViolation('密码错误');
+    input.value = '';
+  }
+}
+
+function logoutAdmin() {
+  state.role = 'user';
+  try { localStorage.setItem('bcsimp_role', 'user'); } catch (e) {}
+  updateRoleUI();
+  renderAllLogs();
+}
+
+function recordViolation(reason) {
+  state.violations++;
+  try { localStorage.setItem('bcsimp_violations', String(state.violations)); } catch (e) {}
+
+  if (state.violations >= 3) {
+    state.role = 'guest';
+    try { localStorage.setItem('bcsimp_role', 'guest'); } catch (e) {}
+    updateRoleUI();
+    // 静默 console
+    console.log = function () {};
+    console.warn = function () {};
+    console.error = function () {};
+    alert('检测到多次非法操作，已降级为永久访客');
+  } else {
+    alert('验证失败：' + reason + '（剩余 ' + (3 - state.violations) + ' 次机会）');
+  }
+}
+
+// ==================== console 劫持 ====================
+var _origLog = console.log;
+var _origWarn = console.warn;
+var _origError = console.error;
+
+console.log = function () {
+  _origLog.apply(console, arguments);
+  if (state.role !== 'guest') {
+    try { addLog(Array.from(arguments).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), 'info'); } catch (e) {}
+  }
+};
+console.warn = function () {
+  _origWarn.apply(console, arguments);
+  if (state.role !== 'guest') {
+    try { addLog(Array.from(arguments).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), 'warn'); } catch (e) {}
+  }
+};
+console.error = function () {
+  _origError.apply(console, arguments);
+  if (state.role !== 'guest') {
+    try { addLog(Array.from(arguments).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), 'error'); } catch (e) {}
+  }
+};
+
+window.addEventListener('error', function (e) {
+  if (state.role !== 'guest') {
+    addLog('未捕获错误: ' + e.message, 'error');
+  }
+});
+
+// ==================== 星空 ====================
+var canvas = document.getElementById('stars');
+var ctx = canvas.getContext('2d');
+var stars = [];
+
+function resizeStars() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   stars = [];
-  for (let i = 0; i < 120; i++) {
+  for (var i = 0; i < 120; i++) {
     stars.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
@@ -115,18 +247,18 @@ function resize() {
     });
   }
 }
-resize();
-window.addEventListener('resize', resize);
+resizeStars();
+window.addEventListener('resize', resizeStars);
 
 function drawStars() {
-  if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (const s of stars) {
+  for (var i = 0; i < stars.length; i++) {
+    var s = stars[i];
     s.y += s.speed;
     if (s.y > canvas.height) s.y = 0;
     ctx.beginPath();
     ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(150, 255, 230, ' + s.a + ')';
+    ctx.fillStyle = 'rgba(150,255,230,' + s.a + ')';
     ctx.fill();
   }
   requestAnimationFrame(drawStars);
@@ -134,26 +266,24 @@ function drawStars() {
 drawStars();
 
 // ==================== 复制 ====================
-function copyLoginIp() { copyText('play.simpfun.cn:26897'); }
-function copyQQ() { copyText('985424094'); }
-
 function copyText(text) {
-  addLog('复制: ' + text, 'info');
+  if (!/^[a-zA-Z0-9\.\:\-\_]+$/.test(text)) {
+    addLog('复制内容含非法字符，拒绝', 'warn');
+    return;
+  }
+  addLog('复制: ' + sanitize(text), 'info');
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => {
-      addLog('已复制到剪贴板', 'success');
+    navigator.clipboard.writeText(text).then(function () {
+      addLog('已复制', 'success');
       alert('已复制：' + text);
-    }).catch(() => {
-      addLog('clipboard API 失败，使用 fallback', 'warn');
-      fallbackCopy(text);
-    });
+    }).catch(function () { fallbackCopy(text); });
   } else {
     fallbackCopy(text);
   }
 }
 
 function fallbackCopy(text) {
-  const ta = document.createElement('textarea');
+  var ta = document.createElement('textarea');
   ta.value = text;
   ta.style.position = 'fixed';
   ta.style.opacity = '0';
@@ -161,19 +291,17 @@ function fallbackCopy(text) {
   ta.select();
   try {
     document.execCommand('copy');
-    addLog('fallback 复制成功', 'success');
     alert('已复制：' + text);
   } catch (e) {
-    addLog('fallback 复制失败: ' + e.message, 'error');
-    alert('复制失败，请手动复制：' + text);
+    alert('复制失败');
   }
   document.body.removeChild(ta);
 }
 
-// ==================== 服务器状态 ====================
+// ==================== 状态查询 ====================
 function setDot(dotId, statusId, online, label) {
-  const dot = document.getElementById(dotId);
-  const st = document.getElementById(statusId);
+  var dot = document.getElementById(dotId);
+  var st = document.getElementById(statusId);
   if (!dot || !st) return;
   if (online) {
     dot.style.background = '#00ff88';
@@ -186,73 +314,76 @@ function setDot(dotId, statusId, online, label) {
   }
 }
 
-async function queryServer(host) {
-  const url = 'https://api.mcstatus.io/v2/status/java/' + host;
-  addLog('请求: ' + url, 'info');
+var queryResult = { main: null, login: null };
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  const startTs = Date.now();
+function updateTotal() {
+  var totalEl = document.getElementById('totalPlayers');
+  if (!totalEl) return;
+  var m = queryResult.main;
+  var l = queryResult.login;
+  var sum = 0;
+  var has = false;
+  if (m && m.ok && m.online) { sum += m.players; has = true; }
+  if (l && l.ok && l.online) { sum += l.players; has = true; }
+  totalEl.textContent = has ? sum : '-';
+}
 
-  try {
-    const r = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timer);
-    const elapsed = Date.now() - startTs;
-    addLog('响应 HTTP ' + r.status + ' (' + elapsed + 'ms)', r.ok ? 'success' : 'warn');
+function queryServer(which, cb) {
+  var url = '/api/status?server=' + encodeURIComponent(which);
+  addLog('查询: ' + which, 'info');
 
-    if (!r.ok) {
-      return { online: false, players: 0, max: 0, error: 'HTTP ' + r.status };
+  var ctrl = new AbortController();
+  var timer = setTimeout(function () { ctrl.abort(); }, 10000);
+  var t0 = Date.now();
+
+  fetch(url, { signal: ctrl.signal })
+    .then(function (r) {
+      clearTimeout(timer);
+      var dt = Date.now() - t0;
+      addLog('HTTP ' + r.status + ' (' + dt + 'ms)', r.ok ? 'success' : 'warn');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      addLog('数据: online=' + data.online + ' players=' + data.players + '/' + data.max, 'data');
+      cb(data);
+    })
+    .catch(function (e) {
+      clearTimeout(timer);
+      addLog('查询失败: ' + (e.message || e), 'error');
+      cb({ ok: false });
+    });
+}
+
+function loadStatus() {
+  queryServer('main', function (main) {
+    queryResult.main = main;
+    if (main.ok) {
+      document.getElementById('mainPlayers').textContent = main.online ? main.players : '离线';
+      document.getElementById('mainMax').textContent = main.online ? main.max : '-';
+      setDot('mainDot', 'mainStatus', main.online, '主服');
     }
+    updateTotal();
+  });
 
-    const data = await r.json();
-    addLog('数据: ' + JSON.stringify(data).slice(0, 200), 'data');
-
-    return {
-      online: data.online === true,
-      players: data.players ? (data.players.online || 0) : 0,
-      max: data.players ? (data.players.max || 0) : 0
-    };
-  } catch (e) {
-    clearTimeout(timer);
-    const elapsed = Date.now() - startTs;
-    addLog('请求异常 (' + elapsed + 'ms): ' + (e.message || String(e)), 'error');
-    return { online: false, players: 0, max: 0, error: String(e.message || e) };
-  }
+  queryServer('login', function (login) {
+    queryResult.login = login;
+    if (login.ok) {
+      document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
+      document.getElementById('loginMax').textContent = login.online ? login.max : '-';
+      setDot('loginDot', 'loginStatus', login.online, '登录服');
+    }
+    updateTotal();
+  });
 }
 
-async function loadStatus() {
-  addLog('--- 开始查询登录服 ---', 'info');
-  const login = await queryServer('play.simpfun.cn:26897');
+// ==================== 启动 ====================
+window.addEventListener('load', function () {
+  updateRoleUI();
+  addLog('=== bcsimp 官网启动 ===', 'success');
+  addLog('当前身份: ' + state.role, 'info');
+  addLog('在线: ' + (navigator.onLine ? '在线' : '离线'), 'info');
 
-  if (login.error) {
-    addLog('查询失败: ' + login.error, 'error');
-    setDot('loginDot', 'loginStatus', false, '登录服');
-    const st = document.getElementById('loginStatus');
-    if (st) st.textContent = '查询失败';
-    const p = document.getElementById('loginPlayers');
-    const m = document.getElementById('loginMax');
-    if (p) p.textContent = '?';
-    if (m) m.textContent = '?';
-    return;
-  }
-
-  addLog('结果: online=' + login.online + ' players=' + login.players + '/' + login.max, 'success');
-  const p = document.getElementById('loginPlayers');
-  const m = document.getElementById('loginMax');
-  if (p) p.textContent = login.online ? login.players : '离线';
-  if (m) m.textContent = login.online ? login.max : '-';
-  setDot('loginDot', 'loginStatus', login.online, '登录服');
-}
-
-// ==================== 初始化 ====================
-function init() {
-  bootLog();
   loadStatus();
   setInterval(loadStatus, 30000);
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
+});
