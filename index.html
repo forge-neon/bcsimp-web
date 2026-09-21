@@ -13,33 +13,46 @@
     <div class="logo">BCSIMP</div>
     <div class="subtitle">Minecraft Server · 我的世界服务器</div>
     <div class="status-bar">
-      <div class="status-item"><div class="dot"></div>服务器在线</div>
-      <div class="status-item">🌐 api1.bcsimp.dpdns.org</div>
-      <div class="status-item">🎮 全球可连</div>
+      <div class="status-item">
+        <div class="dot" id="mainDot"></div>
+        <span id="mainStatus">主服检测中...</span>
+      </div>
+      <div class="status-item">
+        <div class="dot" id="loginDot" style="background:#ffaa00;box-shadow:0 0 8px #ffaa00"></div>
+        <span id="loginStatus">登录服检测中...</span>
+      </div>
     </div>
   </header>
 
   <div class="section-title">服务器信息</div>
   <div class="cards">
     <div class="card">
-      <h3>服务器地址</h3>
-      <div class="mono">api1.bcsimp.dpdns.org</div>
-      <p style="margin-top:10px">支持全球直连，无需端口转发</p>
+      <h3>主服务器</h3>
+      <div class="mono">mc.bcsimp.icu</div>
+      <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
+        <span class="big" id="mainPlayers">-</span>
+        <span style="color:#666;font-size:14px">/ <span id="mainMax">-</span> 在线</span>
+      </div>
+      <p style="margin-top:8px" id="mainMotd">正式游戏服</p>
     </div>
     <div class="card">
-      <h3>当前在线</h3>
-      <div class="big" id="onlineCount">-</div>
-      <p>玩家正在游戏中</p>
+      <h3>登录服</h3>
+      <div class="mono">play.simpfun.cn:26897</div>
+      <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
+        <span class="big" id="loginPlayers">-</span>
+        <span style="color:#666;font-size:14px">/ <span id="loginMax">-</span> 在线</span>
+      </div>
+      <p style="margin-top:8px" id="loginMotd">外置登录认证</p>
     </div>
     <div class="card">
-      <h3>活跃房间</h3>
-      <div class="big" id="roomCount">-</div>
-      <p>开放中的游戏房间</p>
+      <h3>总在线人数</h3>
+      <div class="big" id="totalPlayers">-</div>
+      <p>主服 + 登录服合计</p>
     </div>
     <div class="card">
       <h3>服务器版本</h3>
-      <div class="big">2D</div>
-      <p>Pygame 打造的 2D 我的世界</p>
+      <div class="big" id="serverVersion">Java</div>
+      <p>支持正版 / 外置登录</p>
     </div>
   </div>
 
@@ -52,11 +65,11 @@
   <div class="features">
     <div class="feature">
       <h4>🌍 全球联机</h4>
-      <p>基于 Cloudflare 边缘网络，任何地方都能连上，无需公网 IP</p>
+      <p>主服 mc.bcsimp.icu，任何地方都能连上</p>
     </div>
     <div class="feature">
-      <h4>🛡️ 反作弊系统</h4>
-      <p>服务端权威 + 本地反作弊，改内存无效</p>
+      <h4>🛡️ 外置登录</h4>
+      <p>通过 play.simpfun.cn 认证，无需正版也能玩</p>
     </div>
     <div class="feature">
       <h4>⛏️ 完整生存</h4>
@@ -64,7 +77,7 @@
     </div>
     <div class="feature">
       <h4>📱 手机可玩</h4>
-      <p>竖屏横屏自适应，触摸按键操作</p>
+      <p>支持 PC 和手机客户端</p>
     </div>
     <div class="feature">
       <h4>💾 存档系统</h4>
@@ -72,22 +85,24 @@
     </div>
     <div class="feature">
       <h4>⚡ 实时同步</h4>
-      <p>WebSocket 实时同步，位置插值平滑移动</p>
+      <p>低延迟，全球玩家实时互动</p>
     </div>
   </div>
 
   <div class="center">
-    <a href="https://api1.bcsimp.dpdns.org" class="play-btn">立即游玩</a>
+    <button class="play-btn" onclick="copyServerIp()">复制主服地址</button>
+    <button class="play-btn" style="margin-left:10px;background:linear-gradient(90deg,#ffaa00,#ff6b00)" onclick="copyLoginIp()">复制登录服地址</button>
   </div>
 
   <footer>
     <p>© 2026 bcsimp 我的世界服务器 · Powered by Cloudflare Pages</p>
     <p style="margin-top:8px">
-      <a href="https://api1.bcsimp.dpdns.org/api/game/ping">API 状态</a> ·
+      <a href="/api/status">状态接口</a> ·
       <a href="/api/rooms">房间接口</a>
     </p>
   </footer>
 </div>
 <script src="/app.js"></script>
 </body>
+</html></body>
 </html>
