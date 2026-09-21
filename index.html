@@ -5,6 +5,79 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>bcsimp 我的世界服务器</title>
 <link rel="stylesheet" href="/style.css">
+<style>
+  /* 日志面板 */
+  #logPanel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 40vh;
+    background: rgba(0, 0, 0, 0.92);
+    border-top: 1px solid rgba(0, 255, 200, 0.4);
+    color: #00ffc8;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 12px;
+    overflow-y: auto;
+    z-index: 9999;
+    transform: translateY(calc(100% - 32px));
+    transition: transform 0.3s;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+  }
+  #logPanel.open {
+    transform: translateY(0);
+  }
+  #logToggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    cursor: pointer;
+    color: #00ffc8;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(0, 255, 200, 0.2);
+    margin-bottom: 6px;
+    user-select: none;
+  }
+  #logToggle .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #logToggle .count {
+    background: rgba(0, 255, 200, 0.15);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  #logToggle .arrow {
+    transition: transform 0.3s;
+  }
+  #logPanel.open #logToggle .arrow {
+    transform: rotate(180deg);
+  }
+  #logContent {
+    padding-bottom: 8px;
+  }
+  .log-line {
+    padding: 2px 0;
+    word-break: break-all;
+  }
+  .log-time {
+    color: #666;
+    margin-right: 8px;
+  }
+  .log-info { color: #00ffc8; }
+  .log-success { color: #00ff88; }
+  .log-warn { color: #ffcc00; }
+  .log-error { color: #ff5555; }
+  .log-data { color: #aaaacc; }
+
+  /* 给页面底部留空间给日志栏 */
+  body { padding-bottom: 40px; }
+</style>
 </head>
 <body>
 <canvas id="stars"></canvas>
@@ -87,6 +160,19 @@
     <p>© 2026 bcsimp 我的世界服务器</p>
   </footer>
 </div>
+
+<!-- 日志面板 -->
+<div id="logPanel" class="open">
+  <div id="logToggle" onclick="toggleLog()">
+    <div class="title">
+      <span>📋 运行日志</span>
+      <span class="count" id="logCount">0</span>
+    </div>
+    <span class="arrow">▼</span>
+  </div>
+  <div id="logContent"></div>
+</div>
+
 <script src="/app.js"></script>
 </body>
 </html>
