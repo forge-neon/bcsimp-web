@@ -49,7 +49,6 @@ export async function onRequestGet(context) {
   }
 
   const result = await query(SERVERS[which]);
-  // 返回时剥掉任何可能泄露域名的字段
   const safe = {
     ok: true,
     server: which,
