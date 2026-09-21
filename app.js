@@ -35,7 +35,6 @@ function drawStars() {
 drawStars();
 
 // 复制
-function copyServerIp() { copyText('mc.bcsimp.icu'); }
 function copyLoginIp() { copyText('play.simpfun.cn:26897'); }
 function copyQQ() { copyText('985424094'); }
 
@@ -65,7 +64,7 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// ============ 服务器状态：客户端直接查 ============
+// ============ 只查登录服 ============
 function setDot(dotId, statusId, online, label) {
   const dot = document.getElementById(dotId);
   const st = document.getElementById(statusId);
@@ -119,21 +118,11 @@ async function queryServer(host) {
 }
 
 async function loadStatus() {
-  const [main, login] = await Promise.all([
-    queryServer('mc.bcsimp.icu'),
-    queryServer('play.simpfun.cn:26897')
-  ]);
+  const login = await queryServer('play.simpfun.cn:26897');
 
-  document.getElementById('mainPlayers').textContent = main.online ? main.players : '离线';
-  document.getElementById('mainMax').textContent = main.online ? main.max : '-';
   document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
   document.getElementById('loginMax').textContent = login.online ? login.max : '-';
-
-  setDot('mainDot', 'mainStatus', main.online, '主服');
   setDot('loginDot', 'loginStatus', login.online, '登录服');
-
-  const total = (main.online ? main.players : 0) + (login.online ? login.players : 0);
-  document.getElementById('totalPlayers').textContent = total;
 }
 
 loadStatus();
