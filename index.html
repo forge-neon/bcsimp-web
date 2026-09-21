@@ -14,45 +14,26 @@
     <div class="subtitle">Minecraft 26.2 插件服</div>
     <div class="status-bar">
       <div class="status-item">
-        <div class="dot" id="mainDot"></div>
-        <span id="mainStatus">主服检测中...</span>
-      </div>
-      <div class="status-item">
         <div class="dot" id="loginDot"></div>
         <span id="loginStatus">登录服检测中...</span>
+      </div>
+      <div class="status-item">
+        <span>🔐 所有玩家必须经过登录服</span>
       </div>
     </div>
   </header>
 
-  <div class="section-title">服务器信息</div>
+  <div class="section-title">登录服务器</div>
   <div class="cards">
-    <div class="card">
-      <h3>主服务器</h3>
-      <div class="mono">mc.bcsimp.icu</div>
-      <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
-        <span class="big" id="mainPlayers">-</span>
-        <span style="color:#666;font-size:14px">/ <span id="mainMax">-</span> 在线</span>
-      </div>
-      <p style="margin-top:8px">Minecraft 26.2 插件服</p>
-    </div>
-    <div class="card">
-      <h3>登录服</h3>
-      <div class="mono">play.simpfun.cn:26897</div>
-      <div style="margin-top:14px;display:flex;align-items:baseline;gap:6px">
+    <div class="card" style="grid-column: 1 / -1;">
+      <h3>登录服地址</h3>
+      <div class="mono" style="font-size:18px">play.simpfun.cn:26897</div>
+      <div style="margin-top:16px;display:flex;align-items:baseline;gap:6px">
         <span class="big" id="loginPlayers">-</span>
         <span style="color:#666;font-size:14px">/ <span id="loginMax">-</span> 在线</span>
       </div>
-      <p style="margin-top:8px">simpfun 外置登录</p>
-    </div>
-    <div class="card">
-      <h3>总在线人数</h3>
-      <div class="big" id="totalPlayers">-</div>
-      <p>主服 + 登录服合计</p>
-    </div>
-    <div class="card">
-      <h3>版本</h3>
-      <div class="big">26.2</div>
-      <p>插件服</p>
+      <p style="margin-top:12px">所有玩家进入服务器前必须先连接登录服完成认证。通过 simpfun 外置登录，支持正版与外置账号。</p>
+      <button class="play-btn" style="margin-top:20px;font-size:15px;padding:12px 32px" onclick="copyLoginIp()">复制登录服地址</button>
     </div>
   </div>
 
@@ -63,16 +44,32 @@
       <p>最新版本，插件扩展玩法</p>
     </div>
     <div class="feature">
-      <h4>🔐 simpfun 反作弊</h4>
-      <p>外置登录自带反作弊，公平竞技</p>
+      <h4>🔐 simpfun 外置登录</h4>
+      <p>正版与外置账号均可登录</p>
+    </div>
+    <div class="feature">
+      <h4>🛡️ 自带反作弊</h4>
+      <p>simpfun 登录层反作弊，公平竞技</p>
     </div>
     <div class="feature">
       <h4>⚖️ 无规则</h4>
       <p>自由玩法，没有任何规则限制</p>
     </div>
+  </div>
+
+  <div class="section-title">进服流程</div>
+  <div class="features">
     <div class="feature">
-      <h4>🌐 主服地址</h4>
-      <p>mc.bcsimp.icu</p>
+      <h4>① 添加服务器</h4>
+      <p>在 Minecraft 多人游戏中添加 play.simpfun.cn:26897</p>
+    </div>
+    <div class="feature">
+      <h4>② 完成认证</h4>
+      <p>通过 simpfun 外置登录完成账号认证</p>
+    </div>
+    <div class="feature">
+      <h4>③ 自动进入主服</h4>
+      <p>认证成功后自动转发至游戏主服，无需手动操作</p>
     </div>
   </div>
 
@@ -86,15 +83,10 @@
     </div>
   </div>
 
-  <div class="center">
-    <button class="play-btn" onclick="copyServerIp()">复制主服地址</button>
-    <button class="play-btn" style="margin-left:10px;background:linear-gradient(90deg,#ffaa00,#ff6b00)" onclick="copyLoginIp()">复制登录服地址</button>
-  </div>
-
   <footer>
     <p>© 2026 bcsimp 我的世界服务器</p>
   </footer>
 </div>
 <script src="/app.js"></script>
 </body>
-  </html>
+</html>
