@@ -7,6 +7,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+  padding-bottom: 40px;
 }
 
 #stars {
@@ -25,6 +26,7 @@ body {
   padding: 40px 20px;
 }
 
+/* ============ Header ============ */
 header { text-align: center; margin-bottom: 60px; }
 
 .logo {
@@ -71,10 +73,11 @@ header { text-align: center; margin-bottom: 60px; }
 }
 
 .dot {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #ffaa00;
-  box-shadow: 0 0 8px #ffaa00;
+  background: #00ff88;
+  box-shadow: 0 0 8px #00ff88;
   animation: pulse 2s infinite;
 }
 
@@ -83,6 +86,7 @@ header { text-align: center; margin-bottom: 60px; }
   50% { opacity: 0.4; }
 }
 
+/* ============ Cards ============ */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -106,6 +110,10 @@ header { text-align: center; margin-bottom: 60px; }
   box-shadow: 0 10px 40px rgba(0,255,200,0.15);
 }
 
+.card.full-row {
+  grid-column: 1 / -1;
+}
+
 .card h3 {
   color: #00ffc8;
   font-size: 16px;
@@ -119,20 +127,36 @@ header { text-align: center; margin-bottom: 60px; }
   line-height: 1.7;
 }
 
-.card .big {
+.player-line {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dim {
+  color: #666;
+  font-size: 14px;
+}
+
+.big {
   font-size: 28px;
   color: #fff;
   font-weight: bold;
   margin: 8px 0;
 }
 
-.card .mono {
+.mono {
   font-family: "SF Mono", Consolas, monospace;
   font-size: 13px;
   color: #00ffc8;
   word-break: break-all;
 }
 
+.mono.lg { font-size: 18px; }
+.mono-num { font-family: "SF Mono", Consolas, monospace; letter-spacing: 2px; }
+
+/* ============ Sections ============ */
 .section-title {
   font-size: 24px;
   font-weight: bold;
@@ -141,32 +165,6 @@ header { text-align: center; margin-bottom: 60px; }
   letter-spacing: 1px;
   border-left: 4px solid #00ffc8;
   padding-left: 14px;
-}
-
-.play-btn {
-  display: inline-block;
-  margin-top: 20px;
-  background: linear-gradient(90deg, #00ffc8, #00b3ff);
-  color: #000;
-  font-weight: bold;
-  font-size: 16px;
-  padding: 14px 40px;
-  border-radius: 30px;
-  border: none;
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 0.3s;
-  box-shadow: 0 6px 20px rgba(0,255,200,0.3);
-}
-
-.play-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 30px rgba(0,255,200,0.5);
-}
-
-.center {
-  text-align: center;
-  margin: 40px 0;
 }
 
 .features {
@@ -195,6 +193,31 @@ header { text-align: center; margin-bottom: 60px; }
   line-height: 1.6;
 }
 
+/* ============ Buttons ============ */
+.play-btn {
+  display: inline-block;
+  margin-top: 20px;
+  background: linear-gradient(90deg, #00ffc8, #00b3ff);
+  color: #000;
+  font-weight: bold;
+  font-size: 16px;
+  padding: 14px 40px;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s;
+  box-shadow: 0 6px 20px rgba(0,255,200,0.3);
+}
+
+.play-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(0,255,200,0.5);
+}
+
+.center { text-align: center; margin: 40px 0; }
+
+/* ============ Footer ============ */
 footer {
   text-align: center;
   color: #555;
@@ -203,16 +226,117 @@ footer {
   border-top: 1px solid rgba(255,255,255,0.05);
 }
 
-footer a {
+/* ============ 日志面板 ============ */
+#logPanel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  max-height: 40vh;
+  background: rgba(0,0,0,0.92);
+  border-top: 1px solid rgba(0,255,200,0.4);
   color: #00ffc8;
-  text-decoration: none;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  overflow-y: auto;
+  z-index: 9999;
+  transform: translateY(calc(100% - 32px));
+  transition: transform 0.3s;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
 }
 
-footer a:hover {
-  text-decoration: underline;
+#logPanel.open { transform: translateY(0); }
+
+#logToggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  cursor: pointer;
+  color: #00ffc8;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(0,255,200,0.2);
+  margin-bottom: 6px;
+  user-select: none;
 }
 
+#logToggle .title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#logToggle .count {
+  background: rgba(0,255,200,0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+#logToggle .role {
+  background: rgba(255,170,0,0.2);
+  color: #ffaa00;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+#logToggle .arrow { transition: transform 0.3s; }
+#logPanel.open #logToggle .arrow { transform: rotate(180deg); }
+
+#logContent { padding-bottom: 8px; }
+
+.log-line { padding: 2px 0; word-break: break-all; }
+.log-time { color: #666; margin-right: 8px; }
+.log-info { color: #00ffc8; }
+.log-success { color: #00ff88; }
+.log-warn { color: #ffcc00; }
+.log-error { color: #ff5555; }
+.log-data { color: #aaaacc; }
+
+#adminBar {
+  display: none;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0,255,200,0.2);
+}
+
+#adminBar input {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,255,200,0.3);
+  color: #00ffc8;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  width: 200px;
+}
+
+#adminBar button {
+  background: rgba(0,255,200,0.15);
+  border: 1px solid rgba(0,255,200,0.4);
+  color: #00ffc8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+#adminBar button:hover { background: rgba(0,255,200,0.25); }
+
+#adminBar button.danger {
+  background: rgba(255,80,80,0.15);
+  border-color: rgba(255,80,80,0.4);
+  color: #ff5555;
+}
+
+#adminBar button.danger:hover { background: rgba(255,80,80,0.25); }
+
+/* ============ 移动端 ============ */
 @media (max-width: 600px) {
   .logo { font-size: 34px; letter-spacing: 2px; }
   .container { padding: 24px 16px; }
+  .section-title { font-size: 20px; }
 }
