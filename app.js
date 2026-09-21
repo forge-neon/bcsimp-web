@@ -17,7 +17,6 @@ function resize() {
     });
   }
 }
-
 resize();
 window.addEventListener('resize', resize);
 
@@ -35,14 +34,9 @@ function drawStars() {
 }
 drawStars();
 
-// 复制地址
-function copyServerIp() {
-  copyText('mc.bcsimp.icu');
-}
-
-function copyLoginIp() {
-  copyText('play.simpfun.cn:26897');
-}
+// 复制
+function copyServerIp() { copyText('mc.bcsimp.icu'); }
+function copyLoginIp() { copyText('play.simpfun.cn:26897'); }
 
 function copyText(text) {
   if (navigator.clipboard) {
@@ -70,12 +64,33 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// 拉服务器状态
+// 显示状态
+function setDot(id, statusId, online, label) {
+  const dot = document.getElementById(id);
+  const st = document.getElementById(statusId);
+  if (online) {
+    dot.style.background = '#00ff88';
+    dot.style.boxShadow = '0 0 8px #00ff88';
+    st.textContent = label + '在线';
+  } else {
+    dot.style.background = '#ff3333';
+    dot.style.boxShadow = '0 0 8px #ff3333';
+    st.textContent = label + '离线';
+  }
+}
+
+let firstLoad = true;
+
 async function loadStatus() {
   try {
-    const r = await fetch('/api/status');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    const r = await fetch('/api/status', { signal: ctrl.signal });
+    clearTimeout(timer);
+
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    if (!data.ok) return;
+    if (!data.ok) throw new Error('API error');
 
     const main = data.main;
     const login = data.login;
@@ -88,25 +103,8 @@ async function loadStatus() {
     document.getElementById('loginMax').textContent = login.online ? login.max : '-';
     document.getElementById('loginMotd').textContent = login.motd || '外置登录认证';
 
-    if (main.online) {
-      document.getElementById('mainDot').style.background = '#00ff88';
-      document.getElementById('mainDot').style.boxShadow = '0 0 8px #00ff88';
-      document.getElementById('mainStatus').textContent = '主服在线';
-    } else {
-      document.getElementById('mainDot').style.background = '#ff3333';
-      document.getElementById('mainDot').style.boxShadow = '0 0 8px #ff3333';
-      document.getElementById('mainStatus').textContent = '主服离线';
-    }
-
-    if (login.online) {
-      document.getElementById('loginDot').style.background = '#00ff88';
-      document.getElementById('loginDot').style.boxShadow = '0 0 8px #00ff88';
-      document.getElementById('loginStatus').textContent = '登录服在线';
-    } else {
-      document.getElementById('loginDot').style.background = '#ff3333';
-      document.getElementById('loginDot').style.boxShadow = '0 0 8px #ff3333';
-      document.getElementById('loginStatus').textContent = '登录服离线';
-    }
+    setDot('mainDot', 'mainStatus', main.online, '主服');
+    setDot('loginDot', 'loginStatus', login.online, '登录服');
 
     const total = (main.online ? main.players : 0) + (login.online ? login.players : 0);
     document.getElementById('totalPlayers').textContent = total;
@@ -114,16 +112,32 @@ async function loadStatus() {
     if (main.version) {
       document.getElementById('serverVersion').textContent = main.version.split(' ')[0];
     }
+
+    firstLoad = false;
   } catch (e) {
-    console.error('loadStatus error:', e);
+    console.error('loadStatus:', e);
+    // 超时或失败 → 显示离线
+    document.getElementById('mainPlayers').textContent = '离线';
+    document.getElementById('mainMax').textContent = '-';
+    document.getElementById('loginPlayers').textContent = '离线';
+    document.getElementById('loginMax').textContent = '-';
+    document.getElementById('totalPlayers').textContent = '0';
+    setDot('mainDot', 'mainStatus', false, '主服');
+    setDot('loginDot', 'loginStatus', false, '登录服');
+    if (firstLoad) {
+      document.getElementById('mainStatus').textContent = '状态查询失败';
+      document.getElementById('loginStatus').textContent = '状态查询失败';
+    }
   }
 }
 
-// 拉房间
 async function loadRooms() {
   const list = document.getElementById('roomList');
   try {
-    const r = await fetch('/api/rooms');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch('/api/rooms', { signal: ctrl.signal });
+    clearTimeout(timer);
     const data = await r.json();
     if (!data.ok || !data.rooms || data.rooms.length === 0) {
       list.innerHTML = '<div class="empty">暂无开放房间<br><span style="font-size:12px;color:#444">打开游戏客户端创建房间后会显示在这里</span></div>';
@@ -158,5 +172,5 @@ function escapeHtml(s) {
 
 loadStatus();
 loadRooms();
-setInterval(loadStatus, 30000);
-setInterval(loadRooms, 10000);
+setInterval(loadStatus, 60000);
+setInterval(loadRooms, 15000);
