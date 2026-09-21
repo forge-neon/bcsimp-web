@@ -14,7 +14,11 @@ function addLog(msg, type) {
   logCount++;
   const content = document.getElementById('logContent');
   const countEl = document.getElementById('logCount');
-  if (!content) return;
+  if (!content || !countEl) {
+    // 如果页面还没加载完，就把日志打到 console
+    console.log('[LOG]', msg);
+    return;
+  }
 
   const line = document.createElement('div');
   line.className = 'log-line log-' + type;
@@ -27,9 +31,8 @@ function addLog(msg, type) {
 
   countEl.textContent = logCount;
 
-  // 自动滚到底
   const panel = document.getElementById('logPanel');
-  panel.scrollTop = panel.scrollHeight;
+  if (panel) panel.scrollTop = panel.scrollHeight;
 }
 
 function escapeHtml(s) {
@@ -43,34 +46,40 @@ function escapeHtml(s) {
 }
 
 function toggleLog() {
-  document.getElementById('logPanel').classList.toggle('open');
+  const p = document.getElementById('logPanel');
+  if (p) p.classList.toggle('open');
 }
 
-// 劫持 console，让浏览器控制台的信息也进面板
+// 劫持 console
 const _origLog = console.log;
 const _origWarn = console.warn;
 const _origError = console.error;
 
 console.log = function() {
   _origLog.apply(console, arguments);
-  addLog(Array.from(arguments).map(a =>
-    typeof a === 'object' ? JSON.stringify(a) : String(a)
-  ).join(' '), 'info');
+  try {
+    addLog(Array.from(arguments).map(a =>
+      typeof a === 'object' ? JSON.stringify(a) : String(a)
+    ).join(' '), 'info');
+  } catch (e) {}
 };
 console.warn = function() {
   _origWarn.apply(console, arguments);
-  addLog(Array.from(arguments).map(a =>
-    typeof a === 'object' ? JSON.stringify(a) : String(a)
-  ).join(' '), 'warn');
+  try {
+    addLog(Array.from(arguments).map(a =>
+      typeof a === 'object' ? JSON.stringify(a) : String(a)
+    ).join(' '), 'warn');
+  } catch (e) {}
 };
 console.error = function() {
   _origError.apply(console, arguments);
-  addLog(Array.from(arguments).map(a =>
-    typeof a === 'object' ? JSON.stringify(a) : String(a)
-  ).join(' '), 'error');
+  try {
+    addLog(Array.from(arguments).map(a =>
+      typeof a === 'object' ? JSON.stringify(a) : String(a)
+    ).join(' '), 'error');
+  } catch (e) {}
 };
 
-// 捕获未处理错误
 window.addEventListener('error', function(e) {
   addLog('未捕获错误: ' + e.message + ' @ ' + e.filename + ':' + e.lineno, 'error');
 });
@@ -78,17 +87,21 @@ window.addEventListener('unhandledrejection', function(e) {
   addLog('未处理 Promise: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)), 'error');
 });
 
-// 启动日志
-addLog('=== bcsimp 官网启动 ===', 'success');
-addLog('UA: ' + navigator.userAgent.slice(0, 80), 'data');
-addLog('在线状态: ' + (navigator.onLine ? '在线' : '离线'), navigator.onLine ? 'success' : 'warn');
+// 启动日志（等 DOM 就绪）
+function bootLog() {
+  addLog('=== bcsimp 官网启动 ===', 'success');
+  addLog('UA: ' + navigator.userAgent.slice(0, 80), 'data');
+  addLog('在线状态: ' + (navigator.onLine ? '在线' : '离线'), navigator.onLine ? 'success' : 'warn');
+  addLog('页面地址: ' + location.href, 'data');
+}
 
-// ==================== 星空背景 ====================
+// ==================== 星空 ====================
 const canvas = document.getElementById('stars');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let stars = [];
 
 function resize() {
+  if (!canvas) return;
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   stars = [];
@@ -106,6 +119,7 @@ resize();
 window.addEventListener('resize', resize);
 
 function drawStars() {
+  if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const s of stars) {
     s.y += s.speed;
@@ -156,10 +170,11 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// ==================== 服务器状态查询 ====================
+// ==================== 服务器状态 ====================
 function setDot(dotId, statusId, online, label) {
   const dot = document.getElementById(dotId);
   const st = document.getElementById(statusId);
+  if (!dot || !st) return;
   if (online) {
     dot.style.background = '#00ff88';
     dot.style.boxShadow = '0 0 8px #00ff88';
@@ -200,29 +215,44 @@ async function queryServer(host) {
   } catch (e) {
     clearTimeout(timer);
     const elapsed = Date.now() - startTs;
-    addLog('请求异常 (' + elapsed + 'ms): ' + e.message, 'error');
+    addLog('请求异常 (' + elapsed + 'ms): ' + (e.message || String(e)), 'error');
     return { online: false, players: 0, max: 0, error: String(e.message || e) };
   }
 }
 
 async function loadStatus() {
-  addLog('--- 开始查询登录服状态 ---', 'info');
+  addLog('--- 开始查询登录服 ---', 'info');
   const login = await queryServer('play.simpfun.cn:26897');
 
   if (login.error) {
     addLog('查询失败: ' + login.error, 'error');
     setDot('loginDot', 'loginStatus', false, '登录服');
-    document.getElementById('loginStatus').textContent = '查询失败';
-    document.getElementById('loginPlayers').textContent = '?';
-    document.getElementById('loginMax').textContent = '?';
+    const st = document.getElementById('loginStatus');
+    if (st) st.textContent = '查询失败';
+    const p = document.getElementById('loginPlayers');
+    const m = document.getElementById('loginMax');
+    if (p) p.textContent = '?';
+    if (m) m.textContent = '?';
     return;
   }
 
   addLog('结果: online=' + login.online + ' players=' + login.players + '/' + login.max, 'success');
-  document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
-  document.getElementById('loginMax').textContent = login.online ? login.max : '-';
+  const p = document.getElementById('loginPlayers');
+  const m = document.getElementById('loginMax');
+  if (p) p.textContent = login.online ? login.players : '离线';
+  if (m) m.textContent = login.online ? login.max : '-';
   setDot('loginDot', 'loginStatus', login.online, '登录服');
 }
 
-loadStatus();
-setInterval(loadStatus, 30000);
+// ==================== 初始化 ====================
+function init() {
+  bootLog();
+  loadStatus();
+  setInterval(loadStatus, 30000);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
