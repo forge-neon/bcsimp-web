@@ -1,18 +1,22 @@
-// 真实域名只存在于服务端，前端永远拿不到
-const SERVERS = {
-  main: "mc.bcsimp.icu",
-  login: "play.simpfun.cn:26897"
-};
+// 域名全部从环境变量读取，代码里不出现任何真实地址
+function getServers(env) {
+  return {
+    main: env.SERVER_MAIN || "",
+    login: env.SERVER_LOGIN || ""
+  };
+}
 
 let cache = {};
 const CACHE_TTL = 25000;
 
-// 密码验证失败计数（按 IP）
 let failCounts = {};
 const FAIL_WINDOW = 5 * 60 * 1000;
 const FAIL_LIMIT = 5;
 
 async function query(host) {
+  if (!host) {
+    return { online: false, players: 0, max: 0, error: "no host" };
+  }
   const url = "https://api.mcstatus.io/v2/status/java/" + host;
   try {
     const ctrl = new AbortController();
@@ -39,6 +43,8 @@ function getIP(request) {
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const which = url.searchParams.get("server") || "main";
+
+  const SERVERS = getServers(context.env);
 
   if (!SERVERS[which]) {
     return new Response(JSON.stringify({ ok: false, error: "invalid server" }), {
@@ -91,9 +97,8 @@ export async function onRequestPost(context) {
   }
 
   const ip = getIP(context.request);
-
-  // 限速检查
   const now = Date.now();
+
   if (!failCounts[ip]) failCounts[ip] = { count: 0, firstTs: now };
   if (now - failCounts[ip].firstTs > FAIL_WINDOW) {
     failCounts[ip] = { count: 0, firstTs: now };
@@ -108,7 +113,6 @@ export async function onRequestPost(context) {
     });
   }
 
-  // 解析 body
   let body;
   try {
     body = await context.request.json();
@@ -121,7 +125,6 @@ export async function onRequestPost(context) {
 
   const pwd = String(body.password || "");
 
-  // 防注入：只允许字母、数字、点、连字符、下划线
   if (!/^[a-zA-Z0-9\.\-_]+$/.test(pwd) || pwd.length > 64) {
     failCounts[ip].count++;
     return new Response(JSON.stringify({ ok: false, error: "非法字符" }), {
@@ -130,10 +133,9 @@ export async function onRequestPost(context) {
     });
   }
 
-  // 从环境变量读取期望密码
   const expected = context.env.ADMIN_PASSWORD || "";
 
-  if (pwd !== expected) {
+  if (!expected || pwd !== expected) {
     failCounts[ip].count++;
     return new Response(JSON.stringify({
       ok: false,
@@ -145,7 +147,6 @@ export async function onRequestPost(context) {
     });
   }
 
-  // 成功
   failCounts[ip] = { count: 0, firstTs: now };
   const token = btoa(ip + ":" + now + ":" + Math.random());
 
