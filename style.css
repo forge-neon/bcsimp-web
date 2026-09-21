@@ -26,7 +26,6 @@ body {
   padding: 40px 20px;
 }
 
-/* ============ Header ============ */
 header { text-align: center; margin-bottom: 60px; }
 
 .logo {
@@ -86,7 +85,6 @@ header { text-align: center; margin-bottom: 60px; }
   50% { opacity: 0.4; }
 }
 
-/* ============ Cards ============ */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -110,9 +108,7 @@ header { text-align: center; margin-bottom: 60px; }
   box-shadow: 0 10px 40px rgba(0,255,200,0.15);
 }
 
-.card.full-row {
-  grid-column: 1 / -1;
-}
+.card.full-row { grid-column: 1 / -1; }
 
 .card h3 {
   color: #00ffc8;
@@ -134,10 +130,7 @@ header { text-align: center; margin-bottom: 60px; }
   gap: 6px;
 }
 
-.dim {
-  color: #666;
-  font-size: 14px;
-}
+.dim { color: #666; font-size: 14px; }
 
 .big {
   font-size: 28px;
@@ -156,7 +149,6 @@ header { text-align: center; margin-bottom: 60px; }
 .mono.lg { font-size: 18px; }
 .mono-num { font-family: "SF Mono", Consolas, monospace; letter-spacing: 2px; }
 
-/* ============ Sections ============ */
 .section-title {
   font-size: 24px;
   font-weight: bold;
@@ -193,7 +185,6 @@ header { text-align: center; margin-bottom: 60px; }
   line-height: 1.6;
 }
 
-/* ============ Buttons ============ */
 .play-btn {
   display: inline-block;
   margin-top: 20px;
@@ -215,9 +206,6 @@ header { text-align: center; margin-bottom: 60px; }
   box-shadow: 0 8px 30px rgba(0,255,200,0.5);
 }
 
-.center { text-align: center; margin: 40px 0; }
-
-/* ============ Footer ============ */
 footer {
   text-align: center;
   color: #555;
@@ -226,7 +214,6 @@ footer {
   border-top: 1px solid rgba(255,255,255,0.05);
 }
 
-/* ============ 日志面板 ============ */
 #logPanel {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -334,7 +321,6 @@ footer {
 
 #adminBar button.danger:hover { background: rgba(255,80,80,0.25); }
 
-/* ============ 移动端 ============ */
 @media (max-width: 600px) {
   .logo { font-size: 34px; letter-spacing: 2px; }
   .container { padding: 24px 16px; }
