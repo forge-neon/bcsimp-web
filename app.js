@@ -1,19 +1,21 @@
 // ==================== 权限系统 ====================
 var state = {
-  role: 'user',      // guest < user < admin
+  role: 'user',        // guest < user < admin
   violations: 0,
-  logs: []
+  logs: [],
+  token: null
 };
 
 var MAX_LOG = 300;
-var REAL_PWD = '1145145a2';
 
 (function restoreRole() {
   try {
     var r = localStorage.getItem('bcsimp_role') || 'user';
     var v = parseInt(localStorage.getItem('bcsimp_violations') || '0');
+    var t = localStorage.getItem('bcsimp_token');
     state.role = r;
     state.violations = v;
+    state.token = t;
     if (state.violations >= 3) {
       state.role = 'guest';
       localStorage.setItem('bcsimp_role', 'guest');
@@ -21,7 +23,7 @@ var REAL_PWD = '1145145a2';
   } catch (e) {}
 })();
 
-// ==================== 工具函数 ====================
+// ==================== 工具 ====================
 function pad(n) { return n < 10 ? '0' + n : n; }
 
 function nowStr() {
@@ -42,7 +44,6 @@ function escapeHtml(s) {
   });
 }
 
-// 域名脱敏
 function sanitize(text) {
   var s = String(text);
   s = s.replace(/mc\.bcsimp\.icu/gi, '[主服]');
@@ -133,20 +134,14 @@ function updateRoleUI() {
 }
 
 // ==================== 管理员验证 ====================
-async function sha256(text) {
-  var enc = new TextEncoder().encode(text);
-  var buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 async function tryAdmin() {
   var input = document.getElementById('adminPwd');
   if (!input) return;
   var val = input.value.trim();
   if (!val) return;
 
-  // 防注入：只允许字母数字
-  if (!/^[a-zA-Z0-9]+$/.test(val)) {
+  // 允许字母、数字、点、连字符、下划线
+  if (!/^[a-zA-Z0-9\.\-_]+$/.test(val)) {
     recordViolation('非法字符');
     input.value = '';
     return;
@@ -157,25 +152,53 @@ async function tryAdmin() {
     return;
   }
 
-  var h = await sha256(val);
-  var expected = await sha256(REAL_PWD);
+  try {
+    var r = await fetch('/api/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: val })
+    });
+    var data = await r.json();
 
-  if (h === expected) {
-    state.role = 'admin';
-    try { localStorage.setItem('bcsimp_role', 'admin'); } catch (e) {}
-    updateRoleUI();
-    renderAllLogs();
-    alert('管理员验证通过');
-    input.value = '';
-  } else {
-    recordViolation('密码错误');
+    if (data.ok && data.token) {
+      state.role = 'admin';
+      state.token = data.token;
+      try {
+        localStorage.setItem('bcsimp_role', 'admin');
+        localStorage.setItem('bcsimp_token', data.token);
+      } catch (e) {}
+      updateRoleUI();
+      renderAllLogs();
+      alert('管理员验证通过');
+      input.value = '';
+    } else {
+      var remaining = data.remaining !== undefined ? data.remaining : '-';
+      if (remaining === 0 || r.status === 429) {
+        state.role = 'guest';
+        try { localStorage.setItem('bcsimp_role', 'guest'); } catch (e) {}
+        updateRoleUI();
+        console.log = function () {};
+        console.warn = function () {};
+        console.error = function () {};
+        alert('尝试次数过多，已降级为访客');
+      } else {
+        recordViolation(data.error || '密码错误');
+      }
+      input.value = '';
+    }
+  } catch (e) {
+    alert('验证请求失败: ' + e.message);
     input.value = '';
   }
 }
 
 function logoutAdmin() {
   state.role = 'user';
-  try { localStorage.setItem('bcsimp_role', 'user'); } catch (e) {}
+  state.token = null;
+  try {
+    localStorage.setItem('bcsimp_role', 'user');
+    localStorage.removeItem('bcsimp_token');
+  } catch (e) {}
   updateRoleUI();
   renderAllLogs();
 }
@@ -188,7 +211,6 @@ function recordViolation(reason) {
     state.role = 'guest';
     try { localStorage.setItem('bcsimp_role', 'guest'); } catch (e) {}
     updateRoleUI();
-    // 静默 console
     console.log = function () {};
     console.warn = function () {};
     console.error = function () {};
@@ -267,6 +289,7 @@ drawStars();
 
 // ==================== 复制 ====================
 function copyText(text) {
+  // 复制内容只允许字母数字 . : - _
   if (!/^[a-zA-Z0-9\.\:\-\_]+$/.test(text)) {
     addLog('复制内容含非法字符，拒绝', 'warn');
     return;
