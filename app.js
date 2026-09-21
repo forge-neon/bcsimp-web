@@ -37,6 +37,7 @@ drawStars();
 // 复制
 function copyServerIp() { copyText('mc.bcsimp.icu'); }
 function copyLoginIp() { copyText('play.simpfun.cn:26897'); }
+function copyQQ() { copyText('985424094'); }
 
 function copyText(text) {
   if (navigator.clipboard) {
@@ -64,9 +65,9 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// 显示状态
-function setDot(id, statusId, online, label) {
-  const dot = document.getElementById(id);
+// ============ 服务器状态：客户端直接查 ============
+function setDot(dotId, statusId, online, label) {
+  const dot = document.getElementById(dotId);
   const st = document.getElementById(statusId);
   if (online) {
     dot.style.background = '#00ff88';
@@ -79,98 +80,61 @@ function setDot(id, statusId, online, label) {
   }
 }
 
-let firstLoad = true;
+async function queryServer(host) {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(
+      'https://api.mcsrvstat.us/3/' + encodeURIComponent(host),
+      { signal: ctrl.signal }
+    );
+    clearTimeout(timer);
+    const data = await r.json();
+    return {
+      online: data.online === true,
+      players: data.players ? (data.players.online || 0) : 0,
+      max: data.players ? (data.players.max || 0) : 0,
+      version: data.version || ''
+    };
+  } catch (e) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(
+        'https://api.mcstatus.io/v2/status/java/' + encodeURIComponent(host),
+        { signal: ctrl.signal }
+      );
+      clearTimeout(timer);
+      const data = await r.json();
+      return {
+        online: data.online === true,
+        players: data.players ? (data.players.online || 0) : 0,
+        max: data.players ? (data.players.max || 0) : 0,
+        version: data.version && data.version.name_clean ? data.version.name_clean : ''
+      };
+    } catch (e2) {
+      return { online: false, players: 0, max: 0, version: '', error: true };
+    }
+  }
+}
 
 async function loadStatus() {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
-    const r = await fetch('/api/status', { signal: ctrl.signal });
-    clearTimeout(timer);
+  const [main, login] = await Promise.all([
+    queryServer('mc.bcsimp.icu'),
+    queryServer('play.simpfun.cn:26897')
+  ]);
 
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    if (!data.ok) throw new Error('API error');
+  document.getElementById('mainPlayers').textContent = main.online ? main.players : '离线';
+  document.getElementById('mainMax').textContent = main.online ? main.max : '-';
+  document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
+  document.getElementById('loginMax').textContent = login.online ? login.max : '-';
 
-    const main = data.main;
-    const login = data.login;
+  setDot('mainDot', 'mainStatus', main.online, '主服');
+  setDot('loginDot', 'loginStatus', login.online, '登录服');
 
-    document.getElementById('mainPlayers').textContent = main.online ? main.players : '离线';
-    document.getElementById('mainMax').textContent = main.online ? main.max : '-';
-    document.getElementById('mainMotd').textContent = main.motd || '正式游戏服';
-
-    document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
-    document.getElementById('loginMax').textContent = login.online ? login.max : '-';
-    document.getElementById('loginMotd').textContent = login.motd || '外置登录认证';
-
-    setDot('mainDot', 'mainStatus', main.online, '主服');
-    setDot('loginDot', 'loginStatus', login.online, '登录服');
-
-    const total = (main.online ? main.players : 0) + (login.online ? login.players : 0);
-    document.getElementById('totalPlayers').textContent = total;
-
-    if (main.version) {
-      document.getElementById('serverVersion').textContent = main.version.split(' ')[0];
-    }
-
-    firstLoad = false;
-  } catch (e) {
-    console.error('loadStatus:', e);
-    // 超时或失败 → 显示离线
-    document.getElementById('mainPlayers').textContent = '离线';
-    document.getElementById('mainMax').textContent = '-';
-    document.getElementById('loginPlayers').textContent = '离线';
-    document.getElementById('loginMax').textContent = '-';
-    document.getElementById('totalPlayers').textContent = '0';
-    setDot('mainDot', 'mainStatus', false, '主服');
-    setDot('loginDot', 'loginStatus', false, '登录服');
-    if (firstLoad) {
-      document.getElementById('mainStatus').textContent = '状态查询失败';
-      document.getElementById('loginStatus').textContent = '状态查询失败';
-    }
-  }
-}
-
-async function loadRooms() {
-  const list = document.getElementById('roomList');
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    const r = await fetch('/api/rooms', { signal: ctrl.signal });
-    clearTimeout(timer);
-    const data = await r.json();
-    if (!data.ok || !data.rooms || data.rooms.length === 0) {
-      list.innerHTML = '<div class="empty">暂无开放房间<br><span style="font-size:12px;color:#444">打开游戏客户端创建房间后会显示在这里</span></div>';
-      return;
-    }
-    list.innerHTML = '';
-    for (const room of data.rooms) {
-      const item = document.createElement('div');
-      item.className = 'room-item';
-      item.innerHTML =
-        '<div class="room-info">' +
-          '<div class="room-name">' + escapeHtml(room.name || '未命名房间') + '</div>' +
-          '<div class="room-meta">房主 ' + escapeHtml(room.host_nickname || '?') + ' · 房间号 ' + escapeHtml(room.id || '?') + '</div>' +
-        '</div>' +
-        '<div class="room-count">' + (room.player_count || 0) + '/' + (room.max_players || 8) + '</div>';
-      list.appendChild(item);
-    }
-  } catch (e) {
-    list.innerHTML = '<div class="empty">无法连接服务器</div>';
-  }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[c]));
+  const total = (main.online ? main.players : 0) + (login.online ? login.players : 0);
+  document.getElementById('totalPlayers').textContent = total;
 }
 
 loadStatus();
-loadRooms();
-setInterval(loadStatus, 60000);
-setInterval(loadRooms, 15000);
+setInterval(loadStatus, 30000);
