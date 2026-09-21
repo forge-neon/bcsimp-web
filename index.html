@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bcsimp 我的世界服务器</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="container">
+  <header>
+    <div class="logo">BCSIMP</div>
+    <div class="subtitle">Minecraft Server · 我的世界服务器</div>
+    <div class="status-bar">
+      <div class="status-item"><div class="dot"></div>服务器在线</div>
+      <div class="status-item">🌐 api1.bcsimp.dpdns.org</div>
+      <div class="status-item">🎮 全球可连</div>
+    </div>
+  </header>
+
+  <div class="section-title">服务器信息</div>
+  <div class="cards">
+    <div class="card">
+      <h3>服务器地址</h3>
+      <div class="mono">api1.bcsimp.dpdns.org</div>
+      <p style="margin-top:10px">支持全球直连，无需端口转发</p>
+    </div>
+    <div class="card">
+      <h3>当前在线</h3>
+      <div class="big" id="onlineCount">-</div>
+      <p>玩家正在游戏中</p>
+    </div>
+    <div class="card">
+      <h3>活跃房间</h3>
+      <div class="big" id="roomCount">-</div>
+      <p>开放中的游戏房间</p>
+    </div>
+    <div class="card">
+      <h3>服务器版本</h3>
+      <div class="big">2D</div>
+      <p>Pygame 打造的 2D 我的世界</p>
+    </div>
+  </div>
+
+  <div class="section-title">实时房间</div>
+  <div id="roomList">
+    <div class="empty">加载中...</div>
+  </div>
+
+  <div class="section-title">玩法特性</div>
+  <div class="features">
+    <div class="feature">
+      <h4>🌍 全球联机</h4>
+      <p>基于 Cloudflare 边缘网络，任何地方都能连上，无需公网 IP</p>
+    </div>
+    <div class="feature">
+      <h4>🛡️ 反作弊系统</h4>
+      <p>服务端权威 + 本地反作弊，改内存无效</p>
+    </div>
+    <div class="feature">
+      <h4>⛏️ 完整生存</h4>
+      <p>挖掘、合成、打怪、掉落物、僵尸追踪</p>
+    </div>
+    <div class="feature">
+      <h4>📱 手机可玩</h4>
+      <p>竖屏横屏自适应，触摸按键操作</p>
+    </div>
+    <div class="feature">
+      <h4>💾 存档系统</h4>
+      <p>随时保存世界，下次继续</p>
+    </div>
+    <div class="feature">
+      <h4>⚡ 实时同步</h4>
+      <p>WebSocket 实时同步，位置插值平滑移动</p>
+    </div>
+  </div>
+
+  <div class="center">
+    <a href="https://api1.bcsimp.dpdns.org" class="play-btn">立即游玩</a>
+  </div>
+
+  <footer>
+    <p>© 2026 bcsimp 我的世界服务器 · Powered by Cloudflare Pages</p>
+    <p style="margin-top:8px">
+      <a href="https://api1.bcsimp.dpdns.org/api/game/ping">API 状态</a> ·
+      <a href="/api/rooms">房间接口</a>
+    </p>
+  </footer>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
