@@ -64,22 +64,23 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// ============ 诊断辅助 ============
-function showStatus(text, isError) {
-  const st = document.getElementById('loginStatus');
-  const dot = document.getElementById('loginDot');
-  st.textContent = text;
-  if (isError) {
-    dot.style.background = '#ff3333';
-    dot.style.boxShadow = '0 0 8px #ff3333';
-  } else {
+// ============ 查询：用支持 CORS 的 mcstatus.io ============
+function setDot(dotId, statusId, online, label) {
+  const dot = document.getElementById(dotId);
+  const st = document.getElementById(statusId);
+  if (online) {
     dot.style.background = '#00ff88';
     dot.style.boxShadow = '0 0 8px #00ff88';
+    st.textContent = label + '在线';
+  } else {
+    dot.style.background = '#ff3333';
+    dot.style.boxShadow = '0 0 8px #ff3333';
+    st.textContent = label + '离线';
   }
 }
 
 async function queryServer(host) {
-  const url = 'https://api.mcsrvstat.us/3/' + encodeURIComponent(host);
+  const url = 'https://api.mcstatus.io/v2/status/java/' + host;
   console.log('[query]', url);
 
   const ctrl = new AbortController();
@@ -89,8 +90,14 @@ async function queryServer(host) {
     const r = await fetch(url, { signal: ctrl.signal });
     clearTimeout(timer);
     console.log('[query] status', r.status);
+
+    if (!r.ok) {
+      return { online: false, players: 0, max: 0, error: 'HTTP ' + r.status };
+    }
+
     const data = await r.json();
     console.log('[query] data', data);
+
     return {
       online: data.online === true,
       players: data.players ? (data.players.online || 0) : 0,
@@ -109,7 +116,8 @@ async function loadStatus() {
   console.log('[loadStatus] result', login);
 
   if (login.error) {
-    showStatus('查询失败（' + login.error.slice(0, 30) + '）', true);
+    setDot('loginDot', 'loginStatus', false, '登录服');
+    document.getElementById('loginStatus').textContent = '查询失败';
     document.getElementById('loginPlayers').textContent = '?';
     document.getElementById('loginMax').textContent = '?';
     return;
@@ -117,7 +125,7 @@ async function loadStatus() {
 
   document.getElementById('loginPlayers').textContent = login.online ? login.players : '离线';
   document.getElementById('loginMax').textContent = login.online ? login.max : '-';
-  showStatus(login.online ? '登录服在线' : '登录服离线', !login.online);
+  setDot('loginDot', 'loginStatus', login.online, '登录服');
 }
 
 loadStatus();
